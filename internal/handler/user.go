@@ -21,7 +21,7 @@ func (api *API) Authenticate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Вызов метода из репозитория через api.db
-	err := api.db.AuthenticateUser(context.Background(), user.Username, user.Password)
+	err := api.service.AuthenticateUser(context.Background(), user.Username, user.Password)
 	if err != nil {
 		http.Error(w, "Authentication failed", http.StatusUnauthorized)
 		return
@@ -40,6 +40,32 @@ func (api *API) Authenticate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func GetInfo(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("GetInfo successful"))
+func (api *API) GetInfo(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем имя пользователя из контекста (например, после успешной аутентификации через JWT)
+	username, ok := r.Context().Value(jwt.UserContextKey).(string)
+	if !ok || username == "" {
+		http.Error(w, `{"errors":"Не удалось определить отправителя"}`, http.StatusUnauthorized)
+		return
+	}
+
+	// Получаем информацию о пользователе
+	response, err := api.service.GetUserInfo(r.Context(), username)
+	if err != nil {
+		http.Error(w, `{"errors":"Ошибка получения данных"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Устанавливаем заголовки для ответа (Content-Type: application/json)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	// Создаем отформатированный JSON-ответ
+	indentedResponse, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		http.Error(w, `{"errors":"Ошибка при отправке данных"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Отправляем отформатированный JSON с данными пользователя
+	w.Write(indentedResponse)
 }

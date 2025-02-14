@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"Merch-Store/internal/repository"
+	"Merch-Store/internal/service"
 	"Merch-Store/pkg/jwt"
 
 	"github.com/go-chi/chi/v5"
@@ -11,31 +11,28 @@ import (
 )
 
 type API struct {
-	db *repository.PGRepo
+	service *service.Service
 }
 
-func New(db *repository.PGRepo) *API {
-	return &API{db: db}
+func New(service *service.Service) *API {
+	return &API{service: service}
 }
 
 func (api *API) SetupRoutes(r *chi.Mux) {
 	r.Use(middleware.Logger)
-
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	})
+	r.Get("/health", healthCheckHandler)
 
 	r.Route("/api", func(router chi.Router) {
-		router.Group(func(auth chi.Router) {
-			auth.Post("/auth", api.Authenticate)
-		})
+		router.Post("/auth", api.Authenticate)
 
-		router.Group(func(protected chi.Router) {
-			protected.Use(jwt.JWTValidator)
-
-			protected.Get("/info", GetInfo)
+		router.With(jwt.JWTValidator).Group(func(protected chi.Router) {
+			protected.Get("/info", api.GetInfo)
 			protected.Post("/sendCoin", api.SendCoin)
 			protected.Get("/buy/{item}", api.BuyItem)
 		})
 	})
+}
+
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("OK"))
 }

@@ -7,27 +7,33 @@ import (
 
 	"Merch-Store/cmd/migrate"
 	"Merch-Store/internal/handler"
-	repo "Merch-Store/internal/repository"
-	config "Merch-Store/pkg/configload"
+	"Merch-Store/internal/repository"
+	"Merch-Store/internal/service"
+	"Merch-Store/pkg/configload"
 	"Merch-Store/pkg/jwt"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
-	cfg := config.LoadConfig("/app/configs/config.yaml")
-	connstr := buildDBConnectionString(cfg)
-	repo := connectToDatabase(connstr)
+	cfg := configload.LoadConfig("/app/configs/config.yaml")
+	connStr := buildDBConnectionString(cfg)
+
+	repo, err := repository.New(connStr)
+	if err != nil {
+		log.Fatalf("Failed to connect to the database: %v", err)
+	}
 	defer repo.Close()
+	log.Println("Successfully connected to the database!")
 
 	jwt.SetSecret(cfg.JWT.Secret)
+	applyMigrations(connStr)
 
-	applyMigrations(connstr)
-
-	api := handler.New(repo)
-
+	svc := service.New(repo)
 	r := chi.NewRouter()
-	api.SetupRoutes(r)
+	r.Use(middleware.RequestID, middleware.URLFormat)
+	handler.New(svc).SetupRoutes(r)
 
 	log.Println("Server is running on port 8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {
@@ -35,34 +41,28 @@ func main() {
 	}
 }
 
-func buildDBConnectionString(cfg *config.Config) string {
-	connStr := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s",
-		cfg.Database.User, cfg.Database.Password, cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName, cfg.Database.SSLMode)
-	return connStr
+func buildDBConnectionString(cfg *configload.Config) string {
+	return fmt.Sprintf(
+		"postgresql://%s:%s@%s:%s/%s?sslmode=%s",
+		cfg.Database.User, cfg.Database.Password,
+		cfg.Database.Host, cfg.Database.Port,
+		cfg.Database.DBName, cfg.Database.SSLMode,
+	)
 }
 
-func connectToDatabase(connstr string) *repo.PGRepo {
-	repo, err := repo.New(connstr)
+func applyMigrations(connStr string) {
+	m, err := migrate.CallMigrations(connStr)
 	if err != nil {
-		log.Fatalf("Failed to connect to the database: %v", err)
-	}
-	log.Println("Successfully connected to the database!")
-	return repo
-}
-
-func applyMigrations(connstr string) {
-	m, err := migrate.CallMigrations(connstr)
-	if err != nil {
-		log.Fatalf("Ошибка при создании мигратора: %v", err)
+		log.Fatalf("Error initializing migrations: %v", err)
 	}
 
 	if err := m.Up(); err != nil {
 		if err.Error() == "no change" {
-			log.Println("Миграции уже применены")
+			log.Println("Migrations are already applied")
 		} else {
-			log.Fatalf("Ошибка при применении миграции: %v", err)
+			log.Fatalf("Error applying migrations: %v", err)
 		}
 	} else {
-		log.Println("Миграции успешно применены")
+		log.Println("Migrations successfully applied")
 	}
 }

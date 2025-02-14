@@ -1,36 +1,41 @@
 package handler
 
 import (
+	"Merch-Store/pkg/jwt"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
-	"Merch-Store/pkg/jwt"
-
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi"
 )
 
 // Новый обработчик покупки товара
 func (api *API) BuyItem(w http.ResponseWriter, r *http.Request) {
-	// Извлекаем параметр item из URL
-	vars := mux.Vars(r)
-	itemName := vars["item"]
+	itemName := chi.URLParam(r, "item")
+	log.Printf("Извлечён параметр item: '%s'", itemName)
 
-	// Получаем имя отправителя из контекста
+	if itemName == "" {
+		http.Error(w, `{"errors":"Имя товара отсутствует в запросе"}`, http.StatusBadRequest)
+		return
+	}
+
 	user, ok := r.Context().Value(jwt.UserContextKey).(string)
 	if !ok || user == "" {
 		http.Error(w, `{"errors":"Не удалось определить отправителя"}`, http.StatusUnauthorized)
 		return
 	}
 
-	// Вызов метода покупки товара с количеством 1
-	err := api.db.BuyMerchandise(r.Context(), user, itemName, 1)
-	if err != nil {
+	log.Printf("Покупка товара: user=%s, item=%s", user, itemName)
+
+	if err := api.service.BuyMerchandise(r.Context(), user, itemName, 1); err != nil {
+		log.Printf("Ошибка при покупке: %v", err)
 		http.Error(w, fmt.Sprintf(`{"errors":"Ошибка при покупке товара: %s"}`, err.Error()), http.StatusInternalServerError)
 		return
 	}
 
-	// Отправляем успешный ответ
+	response := map[string]string{"message": fmt.Sprintf("Товар '%s' успешно куплен", itemName)}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf(`{"message":"Товар '%s' успешно куплен"}`, itemName)))
+	json.NewEncoder(w).Encode(response)
 }

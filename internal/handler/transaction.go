@@ -33,13 +33,11 @@ func (api *API) SendCoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Отправка монет
-	if err := api.db.SendCoin(r.Context(), sender, req.ToUser, req.Amount); err != nil {
+	if err := api.service.SendCoin(r.Context(), sender, req.ToUser, req.Amount); err != nil {
 		http.Error(w, `{"errors":"Ошибка при отправке монет"}`, http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message":"Монеты успешно отправлены"}`))
-	w.Write([]byte(sender))
 }
