@@ -18,31 +18,31 @@ type AuthResponse struct {
 func (api *API) Authenticate(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		responsemaker.WriteJSONError(w, "Неверный формат запроса", http.StatusBadRequest)
+		responsemaker.WriteJSONError(w, "Invalid request format", http.StatusBadRequest)
 		return
 	}
 
 	// Проверка корректности username и password
 	if !validators.IsValidUsername(user.Username) {
-		responsemaker.WriteJSONError(w, "Некорректное имя пользователя", http.StatusBadRequest)
+		responsemaker.WriteJSONError(w, "Invalid username", http.StatusBadRequest)
 		return
 	}
 	if !validators.IsValidPassword(user.Password) {
-		responsemaker.WriteJSONError(w, "Некорректный пароль", http.StatusBadRequest)
+		responsemaker.WriteJSONError(w, "Invalid password", http.StatusBadRequest)
 		return
 	}
 
 	// Вызов метода из репозитория через api.service
 	err := api.service.AuthenticateUser(context.Background(), user.Username, user.Password)
 	if err != nil {
-		responsemaker.WriteJSONError(w, "Ошибка аутентификации", http.StatusUnauthorized)
+		responsemaker.WriteJSONError(w, "Authentication error", http.StatusUnauthorized)
 		return
 	}
 
 	// Генерация JWT токена
 	tokenString, err := jwt.GenerateJWT(user.Username)
 	if err != nil {
-		responsemaker.WriteJSONError(w, "Ошибка при генерации токена", http.StatusInternalServerError)
+		responsemaker.WriteJSONError(w, "Error during token generation", http.StatusInternalServerError)
 		return
 	}
 
