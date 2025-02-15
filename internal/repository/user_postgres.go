@@ -22,11 +22,12 @@ func (repo *PGRepo) GetUserID(ctx context.Context, username string) (int, error)
 	return userID, nil
 }
 
-func (repo *PGRepo) GetUserBalance(ctx context.Context, username string) (int, int64, error) {
+func (repo *PGRepo) GetUserBalance(ctx context.Context, tx pgx.Tx, username string) (int, int64, error) {
 	var userID int
 	var balance int64
 
-	err := repo.pool.QueryRow(ctx, `SELECT user_id, balance FROM users WHERE username = $1`, username).Scan(&userID, &balance)
+	err := tx.QueryRow(ctx, `SELECT user_id, balance FROM users WHERE username = $1 FOR UPDATE`, username).
+		Scan(&userID, &balance)
 	if err != nil {
 		return 0, 0, fmt.Errorf("ошибка при получении данных пользователя: %w", err)
 	}

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"Merch-Store/internal/model"
 	"Merch-Store/internal/repository"
@@ -38,19 +39,27 @@ func (s *Service) AuthenticateUser(ctx context.Context, username, password strin
 }
 
 func (s *Service) GetUserInfo(ctx context.Context, username string) (model.UserInfoResponse, error) {
-	// Шаг 1: Получаем ID пользователя и баланс
-	userID, balance, err := s.repo.GetUserBalance(ctx, username)
+	// Начинаем транзакцию
+	tx, err := s.repo.GetPool().Begin(ctx)
+	if err != nil {
+		return model.UserInfoResponse{}, fmt.Errorf("ошибка при начале транзакции: %w", err)
+	}
+	defer tx.Rollback(ctx) // Откат при ошибке
+
+	userID, balance, err := s.repo.GetUserBalance(ctx, tx, username)
 	if err != nil {
 		return model.UserInfoResponse{}, err
 	}
 
-	// Шаг 2: Получаем инвентарь пользователя
+	if err := tx.Commit(ctx); err != nil {
+		return model.UserInfoResponse{}, fmt.Errorf("ошибка при фиксации транзакции: %w", err)
+	}
+
 	inventory, err := s.repo.GetUserInventory(ctx, userID)
 	if err != nil {
 		return model.UserInfoResponse{}, err
 	}
 
-	// Шаг 3: Получаем историю монет (полученные и отправленные транзакции)
 	coinHistory, err := s.repo.GetUserCoinHistory(ctx, userID)
 	if err != nil {
 		return model.UserInfoResponse{}, err

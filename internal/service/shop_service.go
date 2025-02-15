@@ -14,7 +14,7 @@ func (s *Service) BuyMerchandise(ctx context.Context, username, itemName string,
 	}
 	defer tx.Rollback(ctx)
 
-	userID, userBalance, err := s.repo.GetUserBalance(ctx, username)
+	userID, userBalance, err := s.repo.GetUserBalance(ctx, tx, username)
 	if err != nil {
 		return err
 	}

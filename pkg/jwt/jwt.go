@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"Merch-Store/pkg/responsemaker"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -24,13 +26,13 @@ func JWTValidator(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			http.Error(w, "Неавторизован.", http.StatusUnauthorized)
+			responsemaker.WriteJSONError(w, "Неавторизован.", http.StatusUnauthorized)
 			return
 		}
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, "Неавторизован.", http.StatusUnauthorized)
+			responsemaker.WriteJSONError(w, "Неверный формат токена.", http.StatusUnauthorized)
 			return
 		}
 
@@ -42,7 +44,7 @@ func JWTValidator(next http.Handler) http.Handler {
 		})
 
 		if err != nil || !token.Valid {
-			http.Error(w, "Неавторизован.", http.StatusUnauthorized)
+			responsemaker.WriteJSONError(w, "Неверный токен.", http.StatusUnauthorized)
 			return
 		}
 

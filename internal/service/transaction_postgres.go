@@ -14,7 +14,7 @@ func (s *Service) SendCoin(ctx context.Context, senderUsername, receiverUsername
 	defer tx.Rollback(ctx)
 
 	// Получение данных отправителя
-	senderID, senderBalance, err := s.repo.GetUserBalance(ctx, senderUsername)
+	senderID, senderBalance, err := s.repo.GetUserBalance(ctx, tx, senderUsername)
 	if err != nil {
 		return err
 	}
