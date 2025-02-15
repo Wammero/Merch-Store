@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"Merch-Store/internal/model"
 	"context"
 	"errors"
 	"fmt"
@@ -69,28 +70,7 @@ func (repo *PGRepo) UpdateUserBalance(ctx context.Context, tx pgx.Tx, userID int
 	return nil
 }
 
-type UserInfoResponse struct {
-	Coins       int64           `json:"coins"`
-	Inventory   []InventoryItem `json:"inventory"`
-	CoinHistory CoinHistory     `json:"coinHistory"`
-}
-
-type InventoryItem struct {
-	Type     string `json:"type"`
-	Quantity int    `json:"quantity"`
-}
-
-type CoinHistory struct {
-	Received []Transaction `json:"received"`
-	Sent     []Transaction `json:"sent"`
-}
-
-type Transaction struct {
-	FromUser string `json:"fromUser"`
-	Amount   int    `json:"amount"`
-}
-
-func (repo *PGRepo) GetUserInventory(ctx context.Context, userID int) ([]InventoryItem, error) {
+func (repo *PGRepo) GetUserInventory(ctx context.Context, userID int) ([]model.InventoryItem, error) {
 	// Получаем инвентарь пользователя
 	rows, err := repo.pool.Query(ctx, `SELECT m.name, COUNT(p.purchase_id) 
 	FROM merchandise m 
@@ -102,9 +82,9 @@ func (repo *PGRepo) GetUserInventory(ctx context.Context, userID int) ([]Invento
 	}
 	defer rows.Close()
 
-	var inventory []InventoryItem
+	var inventory []model.InventoryItem
 	for rows.Next() {
-		var item InventoryItem
+		var item model.InventoryItem
 		if err := rows.Scan(&item.Type, &item.Quantity); err != nil {
 			return nil, err
 		}
@@ -116,9 +96,9 @@ func (repo *PGRepo) GetUserInventory(ctx context.Context, userID int) ([]Invento
 	return inventory, nil
 }
 
-func (repo *PGRepo) GetUserCoinHistory(ctx context.Context, userID int) (CoinHistory, error) {
+func (repo *PGRepo) GetUserCoinHistory(ctx context.Context, userID int) (model.CoinHistory, error) {
 	// Получаем историю монет пользователя (полученные и отправленные транзакции)
-	var history CoinHistory
+	var history model.CoinHistory
 
 	// Полученные транзакции
 	rows, err := repo.pool.Query(ctx, `SELECT u.username, t.amount 
@@ -131,7 +111,7 @@ func (repo *PGRepo) GetUserCoinHistory(ctx context.Context, userID int) (CoinHis
 	defer rows.Close()
 
 	for rows.Next() {
-		var tx Transaction
+		var tx model.Transaction
 		if err := rows.Scan(&tx.FromUser, &tx.Amount); err != nil {
 			return history, err
 		}
@@ -152,7 +132,7 @@ func (repo *PGRepo) GetUserCoinHistory(ctx context.Context, userID int) (CoinHis
 	defer rows.Close()
 
 	for rows.Next() {
-		var tx Transaction
+		var tx model.Transaction
 		if err := rows.Scan(&tx.FromUser, &tx.Amount); err != nil {
 			return history, err
 		}

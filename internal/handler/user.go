@@ -7,6 +7,7 @@ import (
 
 	"Merch-Store/internal/model"
 	"Merch-Store/pkg/jwt"
+	"Merch-Store/pkg/validators"
 )
 
 type AuthResponse struct {
@@ -20,7 +21,17 @@ func (api *API) Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Вызов метода из репозитория через api.db
+	// Проверка корректности username и password
+	if !validators.IsValidUsername(user.Username) {
+		http.Error(w, "Invalid username", http.StatusBadRequest)
+		return
+	}
+	if !validators.IsValidPassword(user.Password) {
+		http.Error(w, "Invalid password", http.StatusBadRequest)
+		return
+	}
+
+	// Вызов метода из репозитория через api.service
 	err := api.service.AuthenticateUser(context.Background(), user.Username, user.Password)
 	if err != nil {
 		http.Error(w, "Authentication failed", http.StatusUnauthorized)
@@ -39,7 +50,6 @@ func (api *API) Authenticate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
-
 func (api *API) GetInfo(w http.ResponseWriter, r *http.Request) {
 	// Извлекаем имя пользователя из контекста (например, после успешной аутентификации через JWT)
 	username, ok := r.Context().Value(jwt.UserContextKey).(string)

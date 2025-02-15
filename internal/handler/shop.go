@@ -2,12 +2,11 @@ package handler
 
 import (
 	"Merch-Store/pkg/jwt"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 // Новый обработчик покупки товара
@@ -34,8 +33,6 @@ func (api *API) BuyItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := map[string]string{"message": fmt.Sprintf("Товар '%s' успешно куплен", itemName)}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
 }

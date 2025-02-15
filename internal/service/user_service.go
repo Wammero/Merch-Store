@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"Merch-Store/internal/model"
 	"Merch-Store/internal/repository"
 	ps "Merch-Store/pkg/password"
 )
@@ -36,27 +37,27 @@ func (s *Service) AuthenticateUser(ctx context.Context, username, password strin
 	return nil
 }
 
-func (s *Service) GetUserInfo(ctx context.Context, username string) (repository.UserInfoResponse, error) {
+func (s *Service) GetUserInfo(ctx context.Context, username string) (model.UserInfoResponse, error) {
 	// Шаг 1: Получаем ID пользователя и баланс
 	userID, balance, err := s.repo.GetUserBalance(ctx, username)
 	if err != nil {
-		return repository.UserInfoResponse{}, err
+		return model.UserInfoResponse{}, err
 	}
 
 	// Шаг 2: Получаем инвентарь пользователя
 	inventory, err := s.repo.GetUserInventory(ctx, userID)
 	if err != nil {
-		return repository.UserInfoResponse{}, err
+		return model.UserInfoResponse{}, err
 	}
 
 	// Шаг 3: Получаем историю монет (полученные и отправленные транзакции)
 	coinHistory, err := s.repo.GetUserCoinHistory(ctx, userID)
 	if err != nil {
-		return repository.UserInfoResponse{}, err
+		return model.UserInfoResponse{}, err
 	}
 
 	// Формируем ответ
-	response := repository.UserInfoResponse{
+	response := model.UserInfoResponse{
 		Coins:       balance,
 		Inventory:   inventory,
 		CoinHistory: coinHistory,

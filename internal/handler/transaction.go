@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"Merch-Store/pkg/jwt"
+	"Merch-Store/pkg/validators"
 )
 
 type SendCoinRequest struct {
@@ -20,7 +21,7 @@ func (api *API) SendCoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.ToUser == "" || req.Amount <= 0 {
+	if !validators.IsValidUsername(req.ToUser) || req.Amount <= 0 {
 		http.Error(w, `{"errors":"Имя пользователя и количество монет обязательны"}`, http.StatusBadRequest)
 		return
 	}
