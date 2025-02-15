@@ -17,65 +17,54 @@ type AuthResponse struct {
 func (api *API) Authenticate(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат запроса", http.StatusBadRequest)
 		return
 	}
 
 	// Проверка корректности username и password
 	if !validators.IsValidUsername(user.Username) {
-		http.Error(w, "Invalid username", http.StatusBadRequest)
+		writeJSONError(w, "Некорректное имя пользователя", http.StatusBadRequest)
 		return
 	}
 	if !validators.IsValidPassword(user.Password) {
-		http.Error(w, "Invalid password", http.StatusBadRequest)
+		writeJSONError(w, "Некорректный пароль", http.StatusBadRequest)
 		return
 	}
 
 	// Вызов метода из репозитория через api.service
 	err := api.service.AuthenticateUser(context.Background(), user.Username, user.Password)
 	if err != nil {
-		http.Error(w, "Authentication failed", http.StatusUnauthorized)
+		writeJSONError(w, "Ошибка аутентификации", http.StatusUnauthorized)
 		return
 	}
 
 	// Генерация JWT токена
 	tokenString, err := jwt.GenerateJWT(user.Username)
 	if err != nil {
-		http.Error(w, "Error generating token", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при генерации токена", http.StatusInternalServerError)
 		return
 	}
 
 	response := AuthResponse{Token: tokenString}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	writeJSONResponse(w, response, http.StatusOK)
 }
+
 func (api *API) GetInfo(w http.ResponseWriter, r *http.Request) {
-	// Извлекаем имя пользователя из контекста (например, после успешной аутентификации через JWT)
+	// Извлекаем имя пользователя из контекста
 	username, ok := r.Context().Value(jwt.UserContextKey).(string)
 	if !ok || username == "" {
-		http.Error(w, `{"errors":"Не удалось определить отправителя"}`, http.StatusUnauthorized)
+		writeJSONError(w, "Не удалось определить отправителя", http.StatusUnauthorized)
 		return
 	}
 
 	// Получаем информацию о пользователе
 	response, err := api.service.GetUserInfo(r.Context(), username)
 	if err != nil {
-		http.Error(w, `{"errors":"Ошибка получения данных"}`, http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка получения данных", http.StatusInternalServerError)
 		return
 	}
 
-	// Устанавливаем заголовки для ответа (Content-Type: application/json)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	// Создаем отформатированный JSON-ответ
-	indentedResponse, err := json.MarshalIndent(response, "", "  ")
-	if err != nil {
-		http.Error(w, `{"errors":"Ошибка при отправке данных"}`, http.StatusInternalServerError)
-		return
-	}
-
-	// Отправляем отформатированный JSON с данными пользователя
-	w.Write(indentedResponse)
+	// Отправляем JSON-ответ с отступами
+	writeJSONResponse(w, response, http.StatusOK)
 }
