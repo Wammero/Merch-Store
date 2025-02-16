@@ -9,7 +9,7 @@ git clone https://github.com/Wammero/Merch-Store.git
 cd Merch-Store
 ```
 2. Запустить сервисы:
-
+При первом запуске запускайте (docker-compose up) дважды. 
 ```bash
 docker-compose build
 dokcer-compose up
