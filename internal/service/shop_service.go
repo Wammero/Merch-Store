@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 )
 
@@ -14,28 +13,8 @@ func (s *Service) BuyMerchandise(ctx context.Context, username, itemName string,
 	}
 	defer tx.Rollback(ctx)
 
-	userID, userBalance, err := s.repo.GetUserBalance(ctx, tx, username)
-	if err != nil {
-		return err
-	}
-
-	merchID, merchPrice, err := s.repo.GetMerchInfo(ctx, tx, itemName)
-	if err != nil {
-		return err
-	}
-
-	// Проверяем баланс
-	if userBalance < merchPrice*amount {
-		return errors.New("недостаточно средств для покупки")
-	}
-
-	// Обновляем баланс пользователя
-	if err := s.repo.UpdateUserBalance(ctx, tx, userID, -merchPrice*amount); err != nil {
-		return err
-	}
-
 	// Записываем покупку
-	if err := s.repo.InsertPurchase(ctx, tx, userID, merchID); err != nil {
+	if err := s.repo.InsertPurchase(ctx, tx, username, itemName); err != nil {
 		return err
 	}
 

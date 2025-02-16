@@ -36,7 +36,7 @@ func (api *API) SendCoin(w http.ResponseWriter, r *http.Request) {
 
 	// Отправка монет
 	if err := api.service.SendCoin(r.Context(), sender, req.ToUser, req.Amount); err != nil {
-		responsemaker.WriteJSONError(w, "Ошибка при отправке монет: "+err.Error(), http.StatusInternalServerError)
+		responsemaker.WriteJSONError(w, "Ошибка при отправке монет: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 

@@ -12,21 +12,11 @@ import (
 
 var ErrUserNotFound = errors.New("user not found")
 
-// Получение ID пользователя по имени
-func (repo *PGRepo) GetUserID(ctx context.Context, username string) (int, error) {
-	var userID int
-	err := repo.pool.QueryRow(ctx, `SELECT user_id FROM users WHERE username = $1`, username).Scan(&userID)
-	if err != nil {
-		return 0, fmt.Errorf("пользователь не найден: %w", err)
-	}
-	return userID, nil
-}
-
 func (repo *PGRepo) GetUserBalance(ctx context.Context, tx pgx.Tx, username string) (int, int64, error) {
 	var userID int
 	var balance int64
 
-	err := tx.QueryRow(ctx, `SELECT user_id, balance FROM users WHERE username = $1 FOR UPDATE`, username).
+	err := tx.QueryRow(ctx, `SELECT user_id, balance FROM users WHERE username = $1`, username).
 		Scan(&userID, &balance)
 	if err != nil {
 		return 0, 0, fmt.Errorf("ошибка при получении данных пользователя: %w", err)
@@ -60,15 +50,6 @@ func (repo *PGRepo) CreateUser(ctx context.Context, username, hashedPassword, sa
 	`
 	_, err := repo.pool.Exec(ctx, query, username, hashedPassword, salt, time.Now(), time.Now())
 	return err
-}
-
-// Обновление баланса пользователя
-func (repo *PGRepo) UpdateUserBalance(ctx context.Context, tx pgx.Tx, userID int, amount int64) error {
-	_, err := tx.Exec(ctx, `UPDATE users SET balance = balance + $1 WHERE user_id = $2`, amount, userID)
-	if err != nil {
-		return fmt.Errorf("ошибка при обновлении баланса пользователя: %w", err)
-	}
-	return nil
 }
 
 func (repo *PGRepo) GetUserInventory(ctx context.Context, userID int) ([]model.InventoryItem, error) {
